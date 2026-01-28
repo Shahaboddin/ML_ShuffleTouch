@@ -2,33 +2,82 @@ function [C,timingfile,userdefined_trialholder] = ShuffleTouch_userloop(~, Trial
 
 % 1) Default outputs
 C = [];
-timingfile = 'ShuffleTouch.m';         % timing file for EVERY trial
-userdefined_trialholder = '';  % always empty for normal tasks [web:7]
+timingfile = 'ShuffleTouch.m';
+userdefined_trialholder = '';
 
-% 2) Optional: stop after N trials
-max_trials = 20;              % or whatever you want
-if TrialRecord.CurrentTrialNumber >= max_trials
-    TrialRecord.NextBlock = -1; % tell ML to stop after this userloop call [web:7][web:91]
-    return
+% 2) Max trials (from timing file if available)
+max_trials = 500;
+if isfield(TrialRecord,'Editable') && isfield(TrialRecord.Editable,'max_trials_edit')
+    max_trials = TrialRecord.Editable.max_trials_edit;
 end
 
-% 3) Define possible banana positions (in degrees)
-button_locs = [ ...
-     0    0;   % center-low
-     7    7;   % right-middle
-    -7    7;   % left-middle
-     7   -7;   % right-lower
-    -7   -7];  % left-lower
+% 3) Stop after N trials
+if TrialRecord.CurrentTrialNumber >= max_trials
+    TrialRecord.NextBlock = -1;
+    return;
+end
 
-idx = randi(size(button_locs,1));    % random row index
-this_loc = button_locs(idx,:);       % 1×2 [x y]
+% 4) Define positions (EDIT THESE TO MOVE TARGETS)
+%    You can also change all_button_locs to use only some of them.
+cx = 0;   cy = -12;   % center
+rx = 7;   ry = -14;   % right
+lx = -7;  ly = -14;   % left
 
-% 4) Save for analysis if you like
-TrialRecord.User.button_loc = this_loc;   % custom field for this trial [web:81]
+all_button_locs = [ ...
+    cx  cy; ...
+    rx  ry; ...
+    lx  ly];
 
-% 5) Build TaskObjects for this trial
-% One object only: banana image as touch button
-C = { sprintf('pic(banana,%.f,%.f,300,300)', this_loc(1), this_loc(2)) };
-%    TaskObject #1 is banana at this_loc
+button_locs = all_button_locs;
+n_pos = size(button_locs,1);
+
+% 5) Choose position: random, no immediate repeats
+if TrialRecord.CurrentTrialNumber == 0
+    last_idx_global = [];
+else
+    if isfield(TrialRecord.User,'last_idx_global')
+        last_idx_global = TrialRecord.User.last_idx_global;
+    else
+        last_idx_global = [];
+    end
+end
+
+if isempty(last_idx_global)
+    idx_global = randi(n_pos);
+else
+    candidates = setdiff(1:n_pos, last_idx_global);
+    if isempty(candidates), candidates = 1:n_pos; end
+    idx_global = candidates(randi(numel(candidates)));
+end
+
+this_loc = button_locs(idx_global,:);   % [x y] in deg
+
+% 6) Define which images can be used (EDIT THIS LIST)
+%    Comment/remove entries to disable them.
+image_names = { ...
+    'banana.png' , ...
+    'apple.png',  ...
+    'orange.png' ...
+    };
+
+% Example variants:
+% image_names = { 'banana.png', 'apple.png' };     % banana + apple only
+% image_names = { 'banana.png' };                 % banana only
+
+% 7) Pick a random image for this trial
+n_img   = numel(image_names);
+img_idx = randi(n_img);
+this_img = image_names{img_idx};
+
+% 8) Save for analysis (position and index)
+TrialRecord.User.button_loc       = this_loc;
+TrialRecord.User.last_idx_global  = idx_global;
+TrialRecord.User.all_button_locs  = all_button_locs;
+TrialRecord.User.image_index      = img_idx;      % image index if needed later
+% (no bhv_variable for image_name, as requested)
+
+% 9) Build TaskObjects: chosen image at this_loc
+% If your files are in the ML task folder, 'pic(filename,...)' is correct. [web:22]
+C = { sprintf('pic(%s,%.1f,%.1f,200,200)', this_img, this_loc(1), this_loc(2)) };
 
 end

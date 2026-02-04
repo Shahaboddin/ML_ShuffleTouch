@@ -18,7 +18,6 @@ if TrialRecord.CurrentTrialNumber >= max_trials
 end
 
 % 4) Define positions (EDIT THESE TO MOVE TARGETS)
-%    You can also change all_button_locs to use only some of them.
 cx = 0;   cy = -12;   % center
 rx = 7;   ry = -14;   % right
 lx = -7;  ly = -14;   % left
@@ -52,17 +51,15 @@ end
 
 this_loc = button_locs(idx_global,:);   % [x y] in deg
 
-% 6) Define which images can be used (EDIT THIS LIST)
-%    Comment/remove entries to disable them.
+% 6) Which images can be used (EDIT THIS LIST)
 image_names = { ...
     'banana.png' , ...
     'apple.png',  ...
     'orange.png' ...
     };
-
-% Example variants:
-% image_names = { 'banana.png', 'apple.png' };     % banana + apple only
-% image_names = { 'banana.png' };                 % banana only
+% Example:
+% image_names = { 'banana.png', 'apple.png' };   % banana + apple only
+% image_names = { 'banana.png' };               % banana only
 
 % 7) Pick a random image for this trial
 n_img   = numel(image_names);
@@ -73,11 +70,17 @@ this_img = image_names{img_idx};
 TrialRecord.User.button_loc       = this_loc;
 TrialRecord.User.last_idx_global  = idx_global;
 TrialRecord.User.all_button_locs  = all_button_locs;
-TrialRecord.User.image_index      = img_idx;      % image index if needed later
-% (no bhv_variable for image_name, as requested)
+TrialRecord.User.image_index      = img_idx;
 
-% 9) Build TaskObjects: chosen image at this_loc
-% If your files are in the ML task folder, 'pic(filename,...)' is correct. [web:22]
-C = { sprintf('pic(%s,%.1f,%.1f,200,200)', this_img, this_loc(1), this_loc(2)) };
+% 9) Build TaskObjects at this_loc:
+%    #1 = normal size, #2 = enlarged (highlight) version
+normal_size    = 120;          % your current size
+highlight_size = round(1.4 * normal_size);   % ~1.4× bigger
+
+C = { ...
+    sprintf('pic(%s,%.1f,%.1f,%d,%d)', this_img, this_loc(1), this_loc(2), normal_size,    normal_size), ...
+    sprintf('pic(%s,%.1f,%.1f,%d,%d)', this_img, this_loc(1), this_loc(2), highlight_size, highlight_size) ...
+    };
+% TaskObject #1 = normal, #2 = enlarged
 
 end
